@@ -1,0 +1,1456 @@
+[text]null=HAS_WEBDNA_TAGS
+
+// UNIX Epoch timing
+[function name=timeclockEpoch]
+	[return][math][timeclockTimestamp [url][params_string][/url]]-([timeclockEpochDays]*86400)[/math][/return]
+[/function]
+
+[function name=timeclockEpochDays]
+	[return][math]{1/1/1970}[/math][/return]
+[/function]
+
+[function name=timeclockTimestamp]
+	[text]tReturn=0[/text]
+
+	[if "[url]&[params_string][/url]" ^ "[url]&datetime=[/url]"][then]
+		[text multi=T]tDate=&tTime=[/text]
+		[listwords words=[url][getchars start=1&trim=both][:local:datetime][/getchars][/url]&delimiters= ]
+			[switch value=[index]]
+				[case value=1][text]tDate=[word][/text][/case]
+				[case value=2][text]tTime=[word][/text][/case]
+			[/switch]
+		[/listwords]
+
+		[text]tReturn=[math]86400*0{[tDate]}[/math][/text]
+		[showif [tReturn]<0][text]tReturn=0[/text][/showif]
+		[text]tReturn=[math][tReturn]+{[tTime]}[/math][/text]
+	[/then][else]
+		[if "[url]&[params_string][/url]" ^ "[url]&days=[/url]"][then]
+			[text]tReturn=[math]86400*0[:local:days][/math][/text]
+		[/then][else]
+			[text]tReturn=[math]86400*0{[date]}[/math][/text]
+		[/else][/if]
+
+		[showif [tReturn]<0][text]tReturn=0[/text][/showif]
+
+		[if "[url]&[params_string][/url]" ^ "[url]&seconds=[/url]"][then]
+			[text]tReturn=[math][tReturn]+{[:local:seconds]}[/math][/text]
+		[/then][else]
+			[text]tReturn=[math][tReturn]+{[time]}[/math][/text]
+		[/else][/if]
+	[/else][/if]
+
+	[return][tReturn][/return]
+[/function]
+
+[function name=timeclockEpochDate]
+	[text]tReturn=[/text]
+
+	[if "[url]&[params_string][/url]" ^ "[url]&epoch=[/url]"][then]
+		[text]tReturn=[getchars start=1&trim=both][:local:epoch][/getchars][/text]
+	[/then][else]
+		[text]tReturn=[getchars start=1&trim=both][params_string][/getchars][/text]
+	[/else][/if]
+
+	[text]tReturn=[math]floor(0[tReturn]/86400)+[timeclockEpochDays][/math][/text]
+
+	[if "[url]&[params_string][/url]" ^ "[url]&dateFormat=[/url]"][then]
+		[text]tReturn=[format days_to_date [url][:local:dateFormat][/url]][tReturn][/format][/text]
+	[/then][/if]
+
+	[return][tReturn][/return]
+[/function]
+
+[function name=timeclockEpochTime]
+	[text]tReturn=0[/text]
+
+	[if "[url]&[params_string][/url]" ^ "[url]&epoch=[/url]"][then]
+		[text]tReturn=[getchars start=1&trim=both][:local:epoch][/getchars][/text]
+	[/then][else]
+		[text]tReturn=[getchars start=1&trim=both][params_string][/getchars][/text]
+	[/else][/if]
+
+	[text]tReturn=[math]0[tReturn][/math][/text]
+	[text]tReturn=[math][tReturn]-(86400*floor([tReturn]/86400))[/math][/text]
+
+	[if "[url]&[params_string][/url]" ^ "[url]&timeFormat=[/url]"][then]
+		[text]tReturn=[format seconds_to_time [url][:local:timeFormat][/url]][tReturn][/format][/text]
+	[/then][/if]
+
+	[return][tReturn][/return]
+[/function]
+
+[include ^BrainScan/library/brainform.lib]
+
+// Local Definitions
+[function name=now][return][timeclockEpoch][/return][/function]
+[text]includeDir=include/[/text]
+
+[function name=getPageContent]
+	Retrieves the content of the requested page and returns it.
+	
+	[return]
+		[switch value=[url][params_string][/url]]
+			[case value=addEntry][include file=[includeDir]addEntry.dna][/case]
+			[case value=viewEditEntries][include file=[includeDir]viewEditEntries.dna][/case]
+			[case value=timesheet][include file=[includeDir]timesheet.dna][/case]
+			[case value=adminViewProjectHours][include file=[includeDir]adminViewProjectHours.dna][/case]
+			[case value=adminEditProjects][include file=[includeDir]adminEditProjects.dna][/case]
+		[/switch]
+	[/return]
+[/function]
+
+[function name=getTodaysMidnight]
+	// Returns today's date and time at 11:59:59 PM
+	// Used for JavaScript date validation
+	[return][timeclockEpoch time=[url]23:59:00[/url]]000[/return]
+[/function]
+
+[function name=timeOptionTags]
+	Returns <option> tags with times (and timeclockEpoch values) in 15 minute increments.
+	
+	Optional Arguments:
+		dateValue - WebDNA preferences format (%m/%d/%Y), defaults to today
+		defaultTime - timeclockEpoch format (e.g. passing in values from db)
+	
+	[text]fGood=[true][/text]
+	[text]fStartTime=[timeclockEpoch date=[url][date %m/%d/%Y][/url]&time=00:00:00][/text]
+	[text]fEndTime=[timeclockEpoch date=[url][date %m/%d/%Y][/url]&time=23:45:00][/text]
+	[text]fDefaultTime=[/text]
+	[text]fIncrementValue=[math]{00:15:00}[/math][/text]
+	
+	// dateValue argument (optional)
+	[if "[url]&[params_string][/url]" ^ "[url]&dateValue=[/url]"]
+		[then]
+			[if [bfoValidDate value=[url][dateValue][/url]&required=T]]
+				[then]
+					[text]fStartTime=[timeclockEpoch date=[url][dateValue][/url]&time=00:00:00][/text]
+					[text]fEndTime=[timeclockEpoch date=[url][dateValue][/url]&time=23:45:00][/text]
+				[/then]
+				[else][text]fGood=[false][/text][/else]
+			[/if]
+		[/then]
+	[/if]
+	
+	// defaultTime argument (optional)
+	[if "[url]&[params_string][/url]" ^ "[url]&defaultTime=[/url]"]
+		[then]
+			[if [bfoValidInteger value=[url][defaultTime][/url]&required=T]]
+				[then]
+					[text]fDefaultTime=[defaultTime][/text]
+					[text]fDateOfDefaultTime=[timeclockEpochDate epoch=[fDefaultTime]&dateFormat=[url]%m/%d/%Y[/url]][/text]
+					[text]fStartTime=[timeclockEpoch date=[url][fDateOfDefaultTime][/url]&time=00:00:00][/text]
+					[text]fEndTime=[timeclockEpoch date=[url][fDateOfDefaultTime][/url]&time=23:45:00][/text]
+				[/then]
+				[else][text]fGood=[false][/text][/else]
+			[/if]
+		[/then]
+	[/if]
+	
+	[showif [fGood]]
+		[loop start=[fStartTime]&end=[fEndTime]&advance=[fIncrementValue]]
+			[return]<option [showif [index]=[fDefaultTime]]selected[/showif] value="[index]">[timeclockEpochTime epoch=[index]&timeFormat=[url]%I:%M %p[/url]]</option>[/return]
+		[/loop]
+	[/showif]
+	
+	[return][/return]
+[/function]
+
+[function name=getActiveProjects]
+	// Returns a form-based drop-down menu premade for submitting/editing a project for a timeclock entry.
+	// Projects are alphabetically sorted.
+	// Arguments:
+	// timeclockID (optional, default argument) - marks option corresponding to entry's projectID as 'selected'
+	// includeAdminOnly (optional) - retrieves all active projects
+	
+	[if "[url]&[params_string][/url]" ^ "[url]&timeclockID=[/url]"]
+		[then][text]id=[:local:timeclockID][/text][/then]
+		[else]
+			[text]id=[showif [params_string]!][params_string][/showif][/text]
+		[/else]
+	[/if]
+	
+	[text]requestedProjectID=[/text]
+	[showif [id]!]
+		[text]lookupResult=[lookup db=db/timeclock.db&value=[id]&lookInField=timID&returnField=timProjectID&notFound=f][/text]
+		
+		[text]fIsDeleted=[lookup db=db/timeclock.db&value=[id]&lookInField=timID&returnField=timDeletedEntry&notFound=[false]][/text]
+		[showif [fIsDeleted]][text]lookupResult=f[/text][/showif]
+		
+		[hideif [lookupResult]=f][text]requestedProjectID=[lookupResult][/text][/hideif]
+	[/showif]
+	
+	[text]fShowAdminProjects=[false][/text]
+	[if "[url]&[params_string][/url]" ^ "[url]&includeAdminOnly=[/url]"].
+		[then]
+			[text]fTemp=[url][:local:includeAdminOnly][/url][/text]
+			
+			[if "[fTemp]" = "T"][then]
+				[if ([tClockAdmin]) | ([tDBAdmin])][then]
+					[text]fShowAdminProjects=[true][/text]
+				[/then][/if]
+			[/then][/if]
+		[/then]
+		[else]
+			[if ([tClockAdmin]) | ([tDBAdmin])][then]
+				[text]fShowAdminProjects=[true][/text]
+			[/then][/if]
+		[/else]
+	[/if]
+	
+	[text]fSearchString=db=db/project.db&eqproStatusdatarq=[true]&proNamesort=1&allhit=1[/text]
+	[hideif [fShowAdminProjects]][text]fSearchString=[fSearchString]&neproAdminOnlydatarq=[true][/text][/hideif]
+	
+	[search [fSearchString]]
+		[showif [NumFound]>0]
+			[return]<select id="pProjectID" name="pProjectID" class="input-medium">[/return]
+				[return][founditems]<option [showif [proID]=[requestedProjectID]]selected [/showif]value="[proID]">[proName]</option>[/founditems][/return]
+			[return]</select>[/return]
+		[/showif]
+	[/search]
+	
+	[return][/return]
+[/function]
+
+[function name=getDate]
+	Returns an <input> field for submitting a date. Input's value defaults to today's date.
+	
+	Required arguments:
+		inputName - string to name the input field (both name and id)
+	
+	Optional arguments:
+		timeclockID - existing # for changing input's value
+	
+	[text multi=T]fGood=[true]&fInputName=&fTimeclockID=[/text]
+	
+	[if ("[url]&[params_string][/url]" ^ "[url]&inputName=[/url]") | ("[url][params_string][/url]" ! "")]
+		[then]
+			[if "[url]&[params_string][/url]" ^ "[url]&inputName=[/url]"]
+				[then][text]fInputName=[grep search=[^A-Za-z0-9_]&replace=][:local:inputName][/grep][/text][/then]
+				[else][text]fInputName=[grep search=[^A-Za-z0-9_]&replace=][params_string][/grep][/text][/else]
+			[/if]
+		[/then]
+		[else][text]fGood=[false][/text][/else]
+	[/if]
+	
+	[if "[url]&[params_string][/url]" ^ "[url]&timeclockID=[/url]"]
+		[then]
+			[text]fTemp=[url][:local:timeclockID][/url][/text]
+			
+			[if [bfoValidInteger value=[fTemp]&required=T&min=0]]
+				[then]
+					[text]fLookupValue=[lookup db=db/timeclock.db&value=[fTemp]&lookInField=timID&returnField=timID&notFound=f][/text]
+					
+					[text]fIsDeleted=[lookup db=db/timeclock.db&value=[fTemp]&lookInField=timID&returnField=timDeletedEntry&notFound=[false]][/text]
+					[showif [fIsDeleted]][text]fLookupValue=f[/text][/showif]
+					
+					[if "[fLookupValue]"!"f"]
+						[then][text]fTimeclockID=[fLookupValue][/text][/then]
+						[else][text]fGood=[false][/text][/else]
+					[/if]
+				[/then]
+				[else][text]fGood=[false][/text][/else]
+			[/if]
+		[/then]
+	[/if]
+	
+	// Set the input value
+	[showif [fGood]]
+		[text]fInputValue=[date %m/%d/%Y][/text]
+		
+		[showif [url][fTimeclockID][/url]!]
+			[showif pStartDate=[fInputName]]
+				[text]fInputValue=[lookup db=db/timeclock.db&value=[fTimeclockID]&lookInField=timID&returnField=timStartPoint&notFound=][/text]
+				[text]fInputValue=[timeclockEpochDate epoch=[fInputValue]&dateFormat=%m/%d/%Y][/text]
+			[/showif]
+			[showif pEndDate=[fInputName]]
+				[text]fInputValue=[lookup db=db/timeclock.db&value=[fTimeclockID]&lookInField=timID&returnField=timEndPoint&notFound=][/text]
+				[text]fInputValue=[timeclockEpochDate epoch=[fInputValue]&dateFormat=%m/%d/%Y][/text]
+			[/showif]
+		[/showif]
+		
+		// Display input
+		[return]<input type="text" id="[fInputName]" name="[fInputName]" class="input-small" value="[input][fInputValue][/input]">[/return]
+	[/showif]
+	
+	[return][/return]
+[/function]
+
+[function name=getTimes]
+	Returns a <select> field for submitting a time. Dependent on date due to Unix Epoch format. Values default to times based on today's date.
+	
+	Required arguments:
+		selectName - string to name the input field (both name and id)
+	
+	Optional arguments:
+		timeclockID - existing # for changing select's value
+		dateValue - WebDNA preferences format (%m/%d/%Y)
+		selectedValue - WebDNA time format (default HH:MM:SS) to set the desired value to be selected by default
+	[text multi=T]fGood=[true]&fSelectName=&fTimeclockID=&fDateValue=[date %m/%d/%Y]&fSelectedValue=&fDefaultTime=[/text]
+	
+	[if ("[url]&[params_string][/url]" ^ "[url]&selectName=[/url]") | ("[url][params_string][/url]" ! "")]
+		[then]
+			[if "[url]&[params_string][/url]" ^ "[url]&selectName=[/url]"]
+				[then][text]fSelectName=[grep search=[^A-Za-z0-9_]&replace=][:local:selectName][/grep][/text][/then]
+				[else][text]fSelectName=[grep search=[^A-Za-z0-9_]&replace=][params_string][/grep][/text][/else]
+			[/if]
+		[/then]
+		[else][text]fGood=[false][/text][/else]
+	[/if]
+	
+	[if "[url]&[params_string][/url]" ^ "[url]&timeclockID=[/url]"]
+		[then]
+			[text]fTemp=[url][:local:timeclockID][/url][/text]
+			
+			[if [bfoValidInteger value=[fTemp]&required=T&min=0]]
+				[then]
+					[text]fLookupValue=[lookup db=db/timeclock.db&value=[fTemp]&lookInField=timID&returnField=timID&notFound=f][/text]
+					
+					[text]fIsDeleted=[lookup db=db/timeclock.db&value=[fTemp]&lookInField=timID&returnField=timDeletedEntry&notFound=[false]][/text]
+					[showif [fIsDeleted]][text]fLookupValue=f[/text][/showif]
+					
+					[if "[fLookupValue]"!"f"]
+						[then][text]fTimeclockID=[fLookupValue][/text][/then]
+						[else][text]fGood=[false][/text][/else]
+					[/if]
+				[/then]
+				[else][text]fGood=[false][/text][/else]
+			[/if]
+		[/then]
+	[/if]
+	
+	[if "[url]&[params_string][/url]" ^ "[url]&dateValue=[/url]"]
+		[then]
+			[if [bfoValidDate value=[url][dateValue][/url]&required=T]]
+				[then][text]fDateValue=[url][dateValue][/url][/text][/then]
+				[else][text]fGood=[false][/text][/else]
+			[/if]
+		[/then]
+	[/if]
+	
+	[if "[url]&[params_string][/url]" ^ "[url]&selectedValue=[/url]"]
+		[then][text]fSelectedValue=[selectedValue][/text][/then]
+	[/if]
+	
+	// Set timeOptionTag's defaultTime if selectedValue was passed
+	[if ([fGood]) & ("[url][fSelectedValue][/url]" ! "")]
+		[then][text]fDefaultTime=[timeclockEpoch time=[url][fSelectedValue][/url]][/text][/then]
+	[/if]
+	
+	// Set timeOptionTag's defaultTime if timeclockID was passed
+	[if ([fGood]) & ("[url][fTimeclockID][/url]" ! "")]
+		[then]
+			[showif pStartTime=[fSelectName]]
+				[text]fDefaultTime=[lookup db=db/timeclock.db&value=[fTimeclockID]&lookInField=timID&returnField=timStartPoint&notFound=][/text]
+			[/showif]
+			
+			[showif pEndTime=[fSelectName]]
+				[text]fDefaultTime=[lookup db=db/timeclock.db&value=[fTimeclockID]&lookInField=timID&returnField=timEndPoint&notFound=][/text]
+			[/showif]
+		[/then]
+	[/if]
+	
+	[showif [fGood]]
+		[text]fSelectText=<select id="[input][fSelectName][/input]" name="[input][fSelectName][/input]" class="input-small">[/text]
+		
+		[if "[url][fDefaultTime][/url]" ! ""]
+			[then][return][fSelectText][timeOptionTags defaultTime=[fDefaultTime]]</select>[/return][/then]
+			[else]
+				[if "[url][fDateValue][/url]" ! ""]
+					[then][return][fSelectText][timeOptionTags dateValue=[fDateValue]]</select>[/return][/then]
+					[else][return][fSelectText][timeOptionTags]</select>[/return][/else]
+				[/if]
+			[/else]
+		[/if]
+	[/showif]
+	
+	[return][/return]
+[/function]
+
+[function name=getEditableEntry]
+	// Returns the contents of a table row containing an editable form with prefilled options
+	// Arguments: timeclockID (required, default)
+	
+	[hideif [url][params_string][/url]=]
+		[if "[url]&[params_string][/url]" ^ "[url]&timeclockID=[/url]"]
+			[then][text]fTestID=[:local:timeclockID][/text][/then]
+			[else][text]fTestID=[params_string][/text][/else]
+		[/if]
+		
+		[showif [bfoValidInteger value=[fTestID]&required=T&min=0]]
+			[text]fTimeclockID=[lookup db=db/timeclock.db&value=[fTestID]&lookInField=timID&returnField=timID&notFound=f][/text]
+			
+			[text]fIsDeleted=[lookup db=db/timeclock.db&value=[fTimeclockID]&lookInField=timID&returnField=timDeletedEntry&notFound=[false]][/text]
+			[showif [fIsDeleted]][text]fTimeclockID=f[/text][/showif]
+			
+			[hideif f=[fTimeclockID]]
+				[text]fPersonID=[lookup db=db/timeclock.db&value=[fTimeclockID]&lookInField=timID&returnField=timPersonID&notFound=f][/text]
+				// Project cell
+				[return]<td>
+					<input type="hidden" name="pTimeclockID" value="[input][fTimeclockID][/input]">
+					[getActiveProjects timeclockID=[fTimeclockID]]
+				</td>[/return]
+
+				// Start Point cell
+				[return]<td>[getDate inputName=pStartDate&timeclockID=[fTimeclockID]] [getTimes selectName=pStartTime&timeclockID=[fTimeclockID]]</td>[/return]
+
+				// End Point cell
+				[return]<td>[getDate inputName=pEndDate&timeclockID=[fTimeclockID]] [getTimes selectName=pEndTime&timeclockID=[fTimeclockID]]</td>[/return]
+
+				// Hours cell (handles save, cancel, and delete options)
+				[return]<td>
+					<span class="btn-group">
+						<button id="submit" type="submit" class="btn btn-primary btn-small"><i class="icon-pencil icon-white"></i> Edit</button>
+						<button class="btn btn-primary btn-small dropdown-toggle">
+							<span class="caret"></span>
+						</button>
+						<ul class="dropdown-menu">
+							<li><a id="cancel" href="#">Cancel Edit</a></li>
+							<li><a id="delete" href="#">Delete Entry</a></li>
+						</ul>
+					</span>
+				</td>[/return]
+			[/hideif]
+		[/showif]
+	[/hideif]
+	
+	[return][/return]
+[/function]
+
+[function name=replaceEntry]
+	Returns a HTML string of data depending on success of updated entry. Assumed to be filling contents of a <tr> tag.
+	
+	Required arguments:
+		timeclockID - entry # to replace
+		personID - person # that entry belongs to
+		projectID - project # that person worked on
+		startPoint - UNIX Epoch value when person started
+		endPoint - UNIX Epoch value when person stopped
+	[text multi=T]fGood=[true]&fTimeclockID=&fPersonID=&fProjectID=&fStartPoint=&fEndPoint=[/text]
+	
+	[if "[url]&[params_string][/url]" ^ "[url]&timeclockID=[/url]"]
+		[then][text]fTimeclockID=[url][:local:timeclockID][/url][/text][/then]
+		[else][text]fGood=[false][/text][/else]
+	[/if]
+	
+	[if "[url]&[params_string][/url]" ^ "[url]&personID=[/url]"]
+		[then][text]fPersonID=[url][:local:personID][/url][/text][/then]
+		[else][text]fGood=[false][/text][/else]
+	[/if]
+	
+	[if "[url]&[params_string][/url]" ^ "[url]&projectID=[/url]"]
+		[then][text]fProjectID=[url][:local:projectID][/url][/text][/then]
+		[else][text]fGood=[false][/text][/else]
+	[/if]
+	
+	[if "[url]&[params_string][/url]" ^ "[url]&startPoint=[/url]"]
+		[then][text]fStartPoint=[url][:local:startPoint][/url][/text][/then]
+		[else][text]fGood=[false][/text][/else]
+	[/if]
+	
+	[if "[url]&[params_string][/url]" ^ "[url]&endPoint=[/url]"]
+		[then][text]fEndPoint=[url][:local:endPoint][/url][/text][/then]
+		[else][text]fGood=[false][/text][/else]
+	[/if]
+	
+	[if [fGood]]
+		[then]
+			[text]fFunctionResponse=[addEditEntry timeclockID=[fTimeclockID]&personID=[fPersonID]&projectID=[fProjectID]&startPoint=[fStartPoint]&endPoint=[fEndPoint]][/text]
+			
+			[if "[url][fFunctionResponse][/url]" = "OK"]
+				[then]
+					// Project cell
+					[return]
+						<td id="project">
+							[lookup db=db/project.db&value=[fProjectID]&lookInField=proID&returnField=proName&notFound=]
+						</td>
+					[/return]
+					
+					// Start Point cell
+					[return]
+						<td id="startPoint">
+							[hideif [timeclockEpochDate [fStartPoint]]=[timeclockEpochDate [timeclockEpoch]]][timeclockEpochDate epoch=[fStartPoint]&dateFormat=[url]%m/%d[/url]] [/hideif]
+							[timeclockEpochTime epoch=[fStartPoint]&timeFormat=[url]%I:%M %p[/url]]
+						</td>
+					[/return]
+					
+					// End Date cell
+					[return]
+						<td id="endPoint">
+							[hideif [timeclockEpochDate [fEndPoint]]=[timeclockEpochDate [timeclockEpoch]]][timeclockEpochDate epoch=[fEndPoint]&dateFormat=[url]%m/%d[/url]] [/hideif]
+							[timeclockEpochTime epoch=[fEndPoint]&timeFormat=[url]%I:%M %p[/url]]
+						</td>
+					[/return]
+					
+					// Hours cell
+					[return]
+						<td id="hours">
+							[calcHours startPoint=[fStartPoint]&endPoint=[fEndPoint]]
+						</td>
+					[/return]
+				[/then]
+				[else]
+					[return]
+						<td colspan="6" class="alert alert-error">
+							There was a problem replacing your timeclock entry.<br>
+							[fFunctionResponse]
+						</td>
+					[/return]
+				[/else]
+			[/if]
+		[/then]
+		[else]
+			[return]
+				<td colspan="6" class="alert alert-error">
+					There was a problem replacing your timeclock entry.<br>
+					Missing required arguments.
+				</td>
+			[/return]
+		[/else]
+	[/if]
+	
+	[return][/return]
+[/function]
+
+[function name=addEditEntry]
+	Returns OK or HTML error string indicating if entry was added/updated in Timeclock DB.
+	
+	Required arguments:
+		personID - person # that entry belongs to
+		projectID - project # that person worked on
+		startPoint - UNIX Epoch value when person started
+		endPoint - UNIX Epoch value when person stopped
+	
+	Optional arguments:
+		timeclockID - entry # to replace
+	[text multi=T]fResponseString=&fPersonID=&fProjectID=&fStartPoint=&fEndPoint=&fTimeclockID=[/text]
+	
+	[if "[url]&[params_string][/url]" ^ "[url]&personID=[/url]"]
+		[then]
+			[text]fTemp=[url][getchars start=1&end=99&trim=both][:local:personID][/getchars][/url][/text]
+			
+			[if [bfoValidInteger value=[fTemp]&required=T&min=0]]
+				[then]
+					[text]fLookupValue=[url][lookup db=[tDB]member.db&value=[fTemp]&lookInField=memID&returnField=memID&notFound=f][/url][/text]
+					
+					[if ("[fLookupValue]" ^ "error") | ("[fLookupValue]" = "f")]
+						[then][text]fResponseString=[fResponseString]PersonID: invalid argument: [fLookupValue]<br>[/text][/then]
+						[else][text]fPersonID=[fLookupValue][/text][/else]
+					[/if]
+				[/then]
+				[else][text]fResponseString=[fResponseString]PersonID: invalid argument: [fTemp]<br>[/text][/else]
+			[/if]
+		[/then]
+		[else][text]fResponseString=[fResponseString]Missing PersonID argument.<br>[/text][/else]
+	[/if]
+	
+	[if "[url]&[params_string][/url]" ^ "[url]&projectID=[/url]"]
+		[then]
+			[text]fTemp=[url][getchars start=1&end=99&trim=both][:local:projectID][/getchars][/url][/text]
+			
+			[if [bfoValidInteger value=[fTemp]&required=T&min=0]]
+				[then]
+					[text]fLookupValue=[url][lookup db=db/project.db&value=[fTemp]&lookInField=proID&returnField=proID&notFound=f][/url][/text]
+					
+					[if ("[fLookupValue]" ^ "error") | ("[fLookupValue]" = "f")]
+						[then][text]fResponseString=[fResponseString]Project ID: invalid argument: [fLookupValue]<br>[/text][/then]
+						[else][text]fProjectID=[fLookupValue][/text][/else]
+					[/if]
+				[/then]
+				[else][text]fResponseString=[fResponseString]ProjectID: invalid argument: [fTemp]<br>[/text][/else]
+			[/if]
+		[/then]
+		[else][text]fResponseString=[fResponseString]Missing ProjectID argument.<br>[/text][/else]
+	[/if]
+	
+	[if "[url]&[params_string][/url]" ^ "[url]&startPoint=[/url]"]
+		[then]
+			[text]fTemp=[url][getchars start=1&end=99&trim=both][:local:startPoint][/getchars][/url][/text]
+			
+			[if [bfoValidInteger value=[fTemp]&required=T&min=0&max=[timeclockEpoch days=[math]{[date]}+1[/math]&time=23:59:59]]]
+				[then][text]fStartPoint=[fTemp][/text][/then]
+				[else][text]fResponseString=[fResponseString]startPoint: invalid argument: [fTemp]<br>[/text][/else]
+			[/if]
+		[/then]
+		[else][text]fResponseString=[fResponseString]Missing startPoint argument.<br>[/text][/else]
+	[/if]
+	
+	[if "[url]&[params_string][/url]" ^ "[url]&endPoint=[/url]"]
+		[then]
+			[text]fTemp=[url][getchars start=1&end=99&trim=both][:local:endPoint][/getchars][/url][/text]
+			
+			[if [bfoValidInteger value=[fTemp]&required=T&min=0&max=[timeclockEpoch days=[math]{[date]}+1[/math]&time=23:59:59]]]
+				[then][text]fEndPoint=[fTemp][/text][/then]
+				[else][text]fResponseString=[fResponseString]endPoint: invalid argument: [fTemp]<br>[/text][/else]
+			[/if]
+		[/then]
+		[else][text]fResponseString=[fResponseString]Missing endPoint argument.<br>[/text][/else]
+	[/if]
+	
+	// Optional argument
+	[if "[url]&[params_string][/url]" ^ "[url]&timeclockID=[/url]"]
+		[then]
+			[text]fTemp=[url][getchars start=1&end=99&trim=both][:local:timeclockID][/getchars][/url][/text]
+			
+			[if [bfoValidInteger value=[fTemp]&required=T&min=0]]
+				[then]
+					[text]fLookupValue=[lookup db=db/timeclock.db&value=[fTemp]&lookInField=timID&returnField=timID&notFound=f][/text]
+					
+					[text]fIsDeleted=[lookup db=db/timeclock.db&value=[fTemp]&lookInField=timID&returnField=timDeletedEntry&notFound=[false]][/text]
+					[showif [fIsDeleted]][text]fLookupValue=f[/text][/showif]
+					
+					[if ("[fLookupValue]" ^ "error") | ("[fLookupValue]" = "f")]
+						[then][text]fResponseString=[fResponseString]TimeclockID: invalid argument: [fLookupValue]<br>[/text][/then]
+						[else][text]fTimeclockID=[fLookupValue][/text][/else]
+					[/if]
+				[/then]
+				[else][text]fResponseString=[fResponseString]TimeclockID: invalid argument: [fTemp]<br>[/text][/else]
+			[/if]
+		[/then]
+	[/if]
+	
+	// Validate logged in person has permission to add/edit this entry
+	[if "[url][fResponseString][/url]" = ""]
+		[then]
+			[if ([tClockAdmin]) | ([tDBAdmin])]
+				[else]
+					[showif [fTimeclockID]!]
+						[text]fLookupResult=[lookup db=db/timeclock.db&value=[fTimeclockID]&lookInField=timID&returnField=timPersonID&notFound=f][/text]
+						[showif [fLookupResult]![tMemID]][text]fResponseString=[fResponseString]Invalid access.<br>[/text][/showif]
+					[/showif]
+				[/else]
+			[/if]
+		[/then]
+	[/if]
+	
+	// Time validation
+	[if "[url][fResponseString][/url]" = ""]
+		[then]
+			// Loop through valid UNIX Epoch times to validate startPoint and endPoint parameters
+			[text]fLoopStart=[timeclockEpoch days=[timeclockEpochDate epoch=[fStartPoint]]&time=00:00:00][/text]
+			[text]fLoopEnd=[timeclockEpoch days=[math][timeclockEpochDate epoch=[fEndPoint]]+1[/math]&time=00:00:00][/text]
+			[text]fFoundStartPoint=[false][/text]
+			[text]fFoundEndPoint=[false][/text]
+			
+			[showif [fEndPoint]>[fStartPoint]]
+				[loop start=[fLoopStart]&end=[fLoopEnd]&advance=[math]{00:15:00}[/math]]
+					[showif [index]=[fStartPoint]][text]fFoundStartPoint=[true][/text][/showif]
+					[showif [index]=[fEndPoint]][text]fFoundEndPoint=[true][/text][/showif]
+					[if ([fFoundStartPoint]) & ([fFoundEndPoint])][then][break][/then][/if]
+				[/loop]
+			[/showif]
+			
+			[if ([fFoundStartPoint]) & ([fFoundEndPoint])]
+				[else][text]fResponseString=[fResponseString]Invalid times.<br>[/text][/else]
+			[/if]
+		[/then]
+	[/if]
+	
+	// Overlap / duplication check
+	[if "[url][fResponseString][/url]" = ""]
+		[then]
+			[text]fSearchString=db=db/timeclock.db&rank=off&eqtimPersonIDdatarq=[fPersonID]&netimDeletedEntrydatarq=[true][/text]
+			[text]fSearchString=[fSearchString]&timPersonIDtype=num&timStartPointtype=num&timEndPointtype=num[/text]
+			[text]fSearchString=[fSearchString]&lstimStartPointdatarq=[fEndPoint]&grtimEndPointdatarq=[fStartPoint][/text]
+			
+			// If replacing timeclockID, search through everything but that timeclockID
+			[showif [fTimeclockID]!]
+				[text]fSearchString=[fSearchString]&netimIDdatarq=[fTimeclockID]&timIDtype=num[/text]
+			[/showif]
+			
+			[search [fSearchString]]
+				[showif [NumFound]>0][text]fResponseString=[fResponseString]Found overlapping/existing entry.<br>[/text][/showif]
+			[/search]
+		[/then]
+	[/if]
+	
+	// Time to add/replace an entry
+	[if "[url][fResponseString][/url]" = ""]
+		[then]
+			[text]fString=timModPoint=[timeclockEpoch]&timModUser=[tMemID]&timPersonID=[fPersonID]&timProjectID=[fProjectID][/text]
+			[text]fString=[fString]&timStartPoint=[fStartPoint]&timEndPoint=[fEndPoint]&timDeletedEntry=[false][/text]
+			
+			[if "[fTimeclockID]" ! ""]
+				[then]
+					// Replace entry
+					[replace db=db/timeclock.db&eqtimIDdatarq=[fTimeclockID]][fString][/replace]
+				[/then]
+				[else]
+					// Add entry
+					[text]fString=[fString]&timCreatePoint=[timeclockEpoch]&timCreateUser=[tMemID][/text]
+					[append db=db/timeclock.db&autonumber=timID][fString][/append]
+				[/else]
+			[/if]
+			
+			[text]fResponseString=OK[/text]
+		[/then]
+	[/if]
+	
+	[return][fResponseString][/return]
+[/function]
+
+[function name=removeEntry]
+	Returns OK if successful, error string if not
+	
+	Required arguments:
+		timeclockID - entry # to mark as deleted
+	[text multi=T]fResponseString=&fTimeclockID=[/text]
+	
+	[if "[url]&[params_string][/url]" ^ "[url]&timeclockID=[/url]"]
+		[then]
+			[text]fTemp=[url][getchars start=1&end=99&trim=both][:local:timeclockID][/getchars][/url][/text]
+			
+			[if [bfoValidInteger value=[fTemp]&required=T&min=0]]
+				[then]
+					[text]fLookupValue=[lookup db=db/timeclock.db&value=[fTemp]&lookInField=timID&returnField=timID&notFound=f][/text]
+					
+					[text]fIsDeleted=[lookup db=db/timeclock.db&value=[fTemp]&lookInField=timID&returnField=timDeletedEntry&notFound=[false]][/text]
+					[showif [fIsDeleted]][text]fLookupValue=f[/text][/showif]
+					
+					[if "[fLookupValue]"!"f"]
+						[then][text]fTimeclockID=[fLookupValue][/text][/then]
+						[else][text]fResponseString=[fResponseString]TimeclockID: invalid argument.<br>[/text][/else]
+					[/if]
+				[/then]
+				[else][text]fResponseString=[fResponseString]TimeclockID: invalid argument.<br>[/text][/else]
+			[/if]
+		[/then]
+		[else][text]fResponseString=[fResponseString]Missing required argument.<br>[/text][/else]
+	[/if]
+	
+	// Validate logged in person has permission to remove this entry
+	[if "[url][fResponseString][/url]" = ""]
+		[then]
+			[if ([tClockAdmin]) | ([tDBAdmin])]
+				[else]
+					[showif [fTimeclockID]!]
+						[text]fLookupResult=[lookup db=db/timeclock.db&value=[fTimeclockID]&lookInField=timID&returnField=timPersonID&notFound=f][/text]
+						[showif [fLookupResult]![tMemID]][text]fResponseString=[fResponseString]Invalid access.<br>[/text][/showif]
+					[/showif]
+				[/else]
+			[/if]
+		[/then]
+	[/if]
+	
+	// Mark entry as deleted if everything checks out
+	[if "[url][fResponseString][/url]" = ""]
+		[then]
+			[text]fString=timModPoint=[timeclockEpoch]&timModUser=[tMemID]&timDeletedEntry=[true][/text]
+			[replace db=db/timeclock.db&eqtimIDdatarq=[fTimeclockID]][fString][/replace]
+			[text]fResponseString=OK[/text]
+		[/then]
+	[/if]
+	
+	[return][fResponseString][/return]
+[/function]
+
+[function name=calcHours]
+	Calculates difference in time
+	Returns formatted string, or empty if data is bad
+	
+	Required arguments:
+		startPoint
+		endPoint
+	[text multi=T]fGood=[true]&fStartPoint=&fEndPoint=[/text]
+	
+	[if "[url]&[params_string][/url]" ^ "[url]&startPoint=[/url]"]
+		[then]
+			[text]fTemp=[url][getchars start=1&end=99&trim=both][:local:startPoint][/getchars][/url][/text]
+			
+			[if [bfoValidInteger value=[fTemp]&required=T&min=0]]
+				[then][text]fStartPoint=[fTemp][/text][/then]
+				[else][text]fGood=[false][/text][/else]
+			[/if]
+		[/then]
+		[else][text]fGood=[false][/text][/else]
+	[/if]
+	
+	[if "[url]&[params_string][/url]" ^ "[url]&endPoint=[/url]"]
+		[then]
+			[text]fTemp=[url][getchars start=1&end=99&trim=both][:local:endPoint][/getchars][/url][/text]
+			
+			[if [bfoValidInteger value=[fTemp]&required=T&min=0]]
+				[then][text]fEndPoint=[fTemp][/text][/then]
+				[else][text]fGood=[false][/text][/else]
+			[/if]
+		[/then]
+		[else][text]fGood=[false][/text][/else]
+	[/if]
+	
+	[showif [fGood]]
+		[text]fDifference=[math][fEndPoint]-[fStartPoint][/math][/text]		
+		[text]fDays=[format .0d][math][fDifference]/60/60/24[/math][/format][/text]
+		[text]fHours=[format .0d][math][fDifference]/60/60%24[/math][/format][/text]
+		[text]fMinutes=[format .0d][math][fDifference]/60%60[/math][/format][/text]
+
+		[hideif [fDays]=][return][fDays]d [/return][/hideif]
+		[hideif [fHours]=][return][fHours]h [/return][/hideif]
+		[hideif [fMinutes]=][return][fMinutes]m[/return][/hideif]
+	[/showif]
+	
+	[return][/return]
+[/function]
+
+[function name=generateTimesheet]
+	// Calculates and generates a timesheet for a specified date range.
+	// Range cannot be greater than 7 days
+	// Returns HTML table filled with generated data
+	// Arguments (all required): personID, startPoint, endPoint
+	[text multi=T]fGood=[true]&fPerID=&fStart=&fEnd=&fMAX_RANGE=7[/text]
+		
+	// Person parameter
+	[if "[url]&[params_string][/url]" ^ "[url]&personID=[/url]"]
+		[then]
+			[text]temp=[url][getchars start=1&end=99&trim=both][:local:personID][/getchars][/url][/text]
+			
+			[if [bfoValidInteger value=[temp]&required=T&min=0]]
+				[then]					
+					[text]lookupValue=[lookup db=[tDB]member.db&value=[temp]&lookInField=memID&returnField=memID&notFound=f][/text]
+					
+					[if "[lookupValue]"!"f"]
+						[then]
+							[text]fPerID=[lookupValue][/text]
+							[text]fPersonName=[lookup db=[tDB]member.db&value=[fPerID]&lookInField=memID&returnField=memFirstName&notFound=] [/text]
+							[text]fPersonName=[fPersonName][lookup db=[tDB]member.db&value=[fPerID]&lookInField=memID&returnField=memLastName&notFound=][/text]
+						[/then]
+						[else][text]fGood=[false][/text][/else]
+					[/if]
+				[/then]
+				[else][text]fGood=[false][/text][/else]
+			[/if]
+		[/then]
+		[else][text]fGood=false[/text][/else]
+	[/if]
+	
+	// Start Point parameter
+	[if "[url]&[params_string][/url]" ^ "[url]&startPoint=[/url]"]
+		[then]
+			[text]temp=[url][:local:startPoint][/url][/text]
+			
+			[if [bfoValidDate value=[temp]&required=T&min=0&max=[math]{[date]}+1[/math]]]
+				[then][text]fStart=[bfoValue][/text][/then]
+				[else][text]fGood=[false][/text][/else]
+			[/if]
+		[/then]
+		[else][text]fGood=[false][/text][/else]
+	[/if]
+	
+	// End Point parameter
+	[if "[url]&[params_string][/url]" ^ "[url]&endPoint=[/url]"]
+		[then]
+			[text]temp=[url][:local:endPoint][/url][/text]
+			
+			[if [bfoValidDate value=[temp]&required=T&min=0&max=[math]{[date]}+1[/math]]]
+				[then][text]fEnd=[bfoValue][/text][/then]
+				[else][text]fGood=[false][/text][/else]
+			[/if]
+		[/then]
+		[else][text]fGood=[false][/text][/else]
+	[/if]
+	
+	// Range check
+	[showif [fGood]]
+		[text]dateRange=[math][fEnd]-[fStart][/math][/text]
+		[if ([dateRange] > [fMAX_RANGE]) | (1 > [dateRange])]
+			[then][text]fGood=[false][/text][/then]
+		[/if]
+	[/showif]
+	
+	// Generate timesheet
+	[showif [fGood]]
+		[text]tSecondsInHour=[math]60*60[/math][/text]
+		[text]tEightHours=[math][tSecondsInHour]*8[/math][/text]
+		[text]tFourtyHours=[math][tEightHours]*5[/math][/text]
+		
+		// Name (only visible when printing)
+		[return]<h3 id="printName" class="hide">[fPersonName]</h3>[/return]
+		
+		[return]<table border="0" cellspacing="5" cellpadding="5">
+			<thead>
+				<tr>
+					<th>Day</th>
+					<th>Date</th>
+					<th>Start</th>
+					<th>Stop</th>
+					<th>Task</th>
+					<th>Regular</th>
+					<th>Overtime</th>
+					<th>Total Hours</th>
+				</tr>
+			</thead>
+			<tbody>[/return]
+				[table name=hours&fields=houID,houRegularHrs,houDailyOvertime,houTotalHours][/table]
+				[table name=projectSummary&fields=proID,proHours,proName][/table]
+				[text]tSearchConstants=db=db/timeclock.db&allhit=1&timStartPointsort=1&timStartPointtype=num&eqtimPersonIDdatarq=[fPerID]&netimDeletedEntrydatarq=[true][/text]
+			
+				[loop start=[fStart]&end=[fEnd]]
+					[text]fSubSetStart=[timeclockEpoch days=[index]&time=00:00:00][/text]
+					[text]fSubSetEnd=[timeclockEpoch days=[index]&time=23:59:00][/text]
+					[text]fRange=[fSubSetStart] [fSubSetEnd][/text]
+					
+					[search [tSearchConstants]&rntimEndPointdatarq=[fRange]]
+						[showif [NumFound]>0]
+							[text]tDailyHours=0[/text]
+							[founditems]
+								[text]fEntryEndValue=[if [timEndPoint]>[fSubSetEnd]][then][fSubSetEnd][/then][else][timEndPoint][/else][/if][/text]
+								[text]fEntryStartValue=[if [fSubSetStart]>[timStartPoint]][then][fSubSetStart][/then][else][timStartPoint][/else][/if][/text]
+								[text]tDailyHours=[math][tDailyHours]+([fEntryEndValue]-[fEntryStartValue])[/math][/text]
+								
+								// Workaround to the lookup-a-table-value-while-inside-a-function WebDNA bug
+								[search table=projectSummary&eqproIDdatarq=[timProjectID]&rank=off]
+									[switch value=[NumFound]]
+										[case value=0][text]tTaskSummaryProjectID=f[/text][/case]
+										[default][founditems][text]tTaskSummaryProjectID=[proID][/text][/founditems][/default]
+									[/switch]
+								[/search]
+								
+								[if "[tTaskSummaryProjectID]" = "f"]
+									[then]
+										[text]tProjectName=[lookup db=db/project.db&value=[timProjectID]&lookInField=proID&returnField=proName&notFound=][/text]
+										[append table=projectSummary]proID=[timProjectID]&proHours=[math][timEndPoint]-[timStartPoint][/math]&proName=[tProjectName][/append]
+									[/then]
+									[else]
+										[search table=projectSummary&eqproIDdatarq=[tTaskSummaryProjectID]&rank=off]
+											[showif [NumFound]=1][founditems][text]tProjectCurrentHours=[proHours][/text][/founditems][/showif]
+										[/search]
+										[replace table=projectSummary&eqproIDdatarq=[tTaskSummaryProjectID]]proHours=[math][tProjectCurrentHours]+([timEndPoint]-[timStartPoint])[/math][/replace]
+										[search table=projectSummary&eqproIDdatarq=[tTaskSummaryProjectID]&rank=off]
+											[showif [NumFound]=1][founditems][text]tProjectName=[proName][/text][/founditems][/showif]
+										[/search]
+									[/else]
+								[/if]
+							
+								[return]<tr>
+									<td>[timeclockEpochDate epoch=[fEntryEndValue]&dateFormat=[url]%a[/url]]</td>
+									<td>[timeclockEpochDate epoch=[fEntryEndValue]&dateFormat=[url]%m/%d/%Y[/url]]</td>
+									<td>
+										[showif [url][timeclockEpochDate [timStartPoint]][/url]![url][timeclockEpochDate [timEndPoint]][/url]]
+											[timeclockEpochDate epoch=[timStartPoint]&dateFormat=[url]%m/%d[/url]] 
+										[/showif]
+										[timeclockEpochTime epoch=[timStartPoint]&timeFormat=[url]%I:%M %p[/url]]
+									</td>
+									<td>[timeclockEpochTime epoch=[timEndPoint]&timeFormat=[url]%I:%M %p[/url]]</td>
+									<td>[tProjectName]</td>
+									<td></td>
+									<td></td>
+									<td></td>
+								</tr>[/return]
+							[/founditems]
+							[return]<tr>
+								<td><em>[timeclockEpochDate epoch=[min field=timEndPoint]&dateFormat=[url]%a[/url]]</em></td>
+								<td><em>[timeclockEpochDate epoch=[min field=timEndPoint]&dateFormat=[url]%m/%d/%Y[/url]]</em></td>
+								<td></td>
+								<td></td>
+								<td></td>
+								<td>
+									[if [tDailyHours] > [tEightHours]]
+										[then][text]tRegularHours=[format .2f][math][tEightHours]/[tSecondsInHour][/math][/format][/text][/then]
+										[else][text]tRegularHours=[format .2f][math][tDailyHours]/[tSecondsInHour][/math][/format][/text][/else]
+									[/if]
+									<em>[tRegularHours]</em>
+								</td>
+								<td>
+									[if [tDailyHours] > [tEightHours]]
+										[then]
+											[text]tDailyOvertime=[format .2f][math]([tDailyHours]-[tEightHours])/[tSecondsInHour][/math][/format][/text]
+											<em>[tDailyOvertime]</em>
+										[/then]
+										[else][text]tDailyOvertime=0[/text][/else]
+									[/if]
+								</td>
+								<td>
+									[text]tTotalHours=[format .2f][math][tDailyHours]/[tSecondsInHour][/math][/format][/text]
+									<em>[tTotalHours]</em>
+								</td>
+							</tr>[/return]
+							[append table=hours&autonumber=houID]houRegularHrs=[math][tRegularHours][/math]&houDailyOvertime=[math][tDailyOvertime][/math]&houTotalHours=[math][tTotalHours][/math][/append]
+						[/showif]
+					[/search]
+				[/loop]
+				[search table=hours&nehouIDdatarq=__bogus__]
+				[return]<tr>
+					<td><strong>Total Hours</strong></td>
+					<td></td>
+					<td></td>
+					<td></td>
+					<td></td>
+					<td><strong>[format .2f][sum field=houRegularHrs][/format]</strong></td>
+					<td>[showif [sum field=houDailyOvertime]>0]<strong>[format .2f][sum field=houDailyOvertime][/format]</strong>[/showif]</td>
+					<td><strong>[format .2f][sum field=houTotalHours][/format]</strong></td>
+				</tr>[/return]
+				[/search]
+				[return]
+			</tbody>
+			<thead>
+				<tr>
+					<th>Task Summary</th>
+					<th></th>
+					<th></th>
+					<th></th>
+					<th></th>
+					<th></th>
+					<th></th>
+					<th></th>
+				</tr>
+			</thead>
+			<tbody>[/return]
+				[search table=projectSummary&neproIDdatarq=__bogus__&proNamesort=1&allhit=1]
+					[return]
+						[founditems]
+							<tr>
+								<td></td>
+								<td></td>
+								<td></td>
+								<td></td>
+								<td>[proName]</td>
+								
+								[if [proHours] > [tFourtyHours]]
+									[then]
+										<td><em>[format .2f][math][tFourtyHours]/[tSecondsInHour][/math][/format]</em></td>
+										<td><em>[format .2f][math]([proHours]-[tFourtyHours])/[tSecondsInHour][/math][/format]</em></td>
+									[/then]
+									[else]
+										<td><em>[format .2f][math][proHours]/[tSecondsInHour][/math][/format]</em></td>
+										<td></td>
+									[/else]
+								[/if]
+								
+								<td><em>[format .2f][math][proHours]/[tSecondsInHour][/math][/format]</em></td>
+							</tr>
+						[/founditems]
+					[/return]
+					[return]<tr>
+						<td><strong>Total Hours</strong></td>
+						<td></td>
+						<td></td>
+						<td></td>
+						<td></td>
+					
+						[if [sum field=proHours] > [tFourtyHours]]
+							[then]
+								<td><strong>[format .2f][math][tFourtyHours]/[tSecondsInHour][/math][/format]</strong></td>
+								<td><strong>[format .2f][math]([sum field=proHours]-[tFourtyHours])/[tSecondsInHour][/math][/format]</strong></td>
+							[/then]
+							[else]
+								<td><strong>[format .2f][math][sum field=proHours]/[tSecondsInHour][/math][/format]</strong></td>
+								<td></td>
+							[/else]
+						[/if]
+					
+						<td><strong>[format .2f][math][sum field=proHours]/[tSecondsInHour][/math][/format]</strong></td>
+					</tr>[/return]
+				[/search]
+			[return]</tbody>
+		</table>[/return]
+	[/showif]
+	
+	[return][/return]
+[/function]
+
+[function name=displayTimeclockEntries]
+	// Gets and formats timesheet data for display
+	// Returns HTML Table (with multiple pages if more than 50 entries found)
+	// Entries sorted by most recent timestamps
+	// Arguments
+	// personID (required, default), pageNum (optional)
+	[text multi=T]fPerID=&fPageNum=1&fGood=[true]&fPAGEMAX=50&fStartAt=&fNumFound=0[/text]
+	
+	// PersonID argument
+	[if "[url]&[params_string][/url]" ^ "[url]&personID=[/url]"]
+		[then]
+			[text]temp=[url][getchars start=1&end=99&trim=both][:local:personID][/getchars][/url][/text]
+			
+			[if [bfoValidInteger value=[temp]&required=T&min=0]]
+				[then][text]fPerID=[temp][/text][/then]
+				[else][text]fGood=[false][/text][/else]
+			[/if]
+		[/then]
+		[else]
+			[text]temp=[url][getchars start=1&end=99&trim=both][params_string][/getchars][/url][/text]
+			[if [isInteger number=[temp]&min=0]]
+				[then][text]fPerID=[temp][/text][/then]
+				[else][text]fGood=[false][/text][/else]
+			[/if]
+		[/else]
+	[/if]
+	
+	// PageNum argument
+	[showif [url]&[params_string][/url]^[url]&pageNum=[/url]]
+		[text]temp=[url][getchars start=1&end=99&trim=both][:local:pageNum][/getchars][/url][/text]
+		[showif [isInteger number=[temp]&min=0]][text]fPageNum=[temp][/text][/showif]
+	[/showif]
+	
+	// Page calculation
+	[text]fStartAt=[math](([fPageNum]-1)*[fPAGEMAX])+1[/math][/text]
+	
+	[showif [fGood]]
+		[text]fSearchConstants=db=db/timeclock.db&allhit=1&detimEndPointsort=1&timEndPointtype=num&max=[fPAGEMAX]&netimDeletedEntrydatarq=[true][/text]
+		[search [fSearchConstants]&eqtimPersonIDdatarq=[fPerID]&startAt=[fStartAt]]
+			[showif [NumFound]>0]
+				[text]fNumFound=[NumFound][/text]
+				[return]
+					<input type="hidden" name="pPersonID" value="[input][fPerID][/input]" id="pPerson">
+					<table class="table table-striped table-condensed">
+						<thead>
+							<tr id="tableHeader">
+								<th id="project">Project</th>
+								<th id="startDate">Start Point</th>
+								<th id="endDate">End Point <i class="icon-chevron-down" title="Sorted in descending order"></i></th>
+								<th id="hours">Hours</th>
+							</tr>
+						</thead>
+						<tbody>
+							[founditems]
+								<tr id="[timID]">
+									<td id="project">[lookup db=db/project.db&lookinfield=proID&value=[timProjectID]&returnField=proName&notFound=Project Name Unknown]</td>
+									<td id="startPoint">[hideif [timeclockEpochDate [timStartPoint]]=[timeclockEpochDate [timeclockEpoch]]][timeclockEpochDate epoch=[timStartPoint]&dateFormat=[url]%m/%d[/url]] [/hideif][timeclockEpochTime epoch=[timStartPoint]&timeFormat=[url]%I:%M %p[/url]]</td>
+									<td id="endPoint">[hideif [timeclockEpochDate [timEndPoint]]=[timeclockEpochDate [timeclockEpoch]]][timeclockEpochDate epoch=[timEndPoint]&dateFormat=[url]%m/%d[/url]] [/hideif][timeclockEpochTime epoch=[timEndPoint]&timeFormat=[url]%I:%M %p[/url]]</td>
+									<td id="hours">[calcHours startPoint=[timStartPoint]&endPoint=[timEndPoint]]</td>
+								</tr>
+							[/founditems]
+						</tbody>
+					</table>
+				[/return]
+			[/showif]
+		[/search]
+	[/showif]
+	
+	[if ([fGood]) & ([fNumFound]>[fPAGEMAX])]
+		[then]
+			[return]
+				<ul class="pager">
+					<li class="previous [showif [fPageNum]=1]disabled[/showif]">
+						<a href="#">&larr; Newer Entries</a>
+					</li>
+					<li class="next [showif [math][fNumFound]-[fStartAt][/math]<[fPAGEMAX]]disabled[/showif]">
+						<a href="#">Older Entries &rarr;</a>
+					</li>
+				</ul>
+			[/return]
+		[/then]
+	[/if]
+	
+	[return][/return]
+[/function]
+
+[function name=getTimeclockMembers]
+	Returns <select> filled with people with access to Timeclock
+		
+	Optional arguments:
+		selectedValue (default argument) - # to set the default value
+		showAllOption - T/F to display a "Show All" option (value: 'all') at the beginning of the select
+	[text multi=T]fGood=[true]&fSelectedValue=&fShowAllOption=[false][/text]
+	
+	[if "[url]&[params_string][/url]" ^ "[url]&selectedValue=[/url]"]
+		[then][text]fSelectedValue=[url][getchars start=1&end=99&trim=both][:local:selectedValue][/getchars][/url][/text][/then]
+		[else][text]fSelectedValue=[url][getchars start=1&end=99&trim=both][params_string][/getchars][/url][/text][/else]
+	[/if]
+	
+	[if "[url]&[params_string]&[/url]" ^ "[url]&showAllOption=[/url]"][then]
+		[showif T=[url][:local:showAllOption][/url]][text]fShowAllOption=[true][/text][/showif]
+	[/then][/if]
+	
+	[search db=[tDB]member.db&womemAccessdatarq=timeclock,timeclockadmin&memAcessword=ww&memAccesswbrk=,&memAccessfbrk=,&allhit=1&memFirstNamesort=1&memLastNamesort=2]
+		[showif [NumFound]>0]
+			[return]<select id="pPersonID" name="pPersonID" class="input-medium">[/return]
+			[showif [fShowAllOption]][return]<option value="everyone">Show All</option>[/return][/showif]
+				[return][founditems]<option [showif [fSelectedValue]=[memID]]selected[/showif] value="[memID]">[memFirstName] [memLastName]</option>[/founditems][/return]
+			[return]</select>[/return]
+		[/showif]
+	[/search]
+	
+	[return][/return]
+[/function]
+
+[function name=displayProjectHours]
+	Returns <table> with relevant and formatted content about a specified project
+	
+	Required arguments:
+		projectID (default argument) = # of project to gather information about
+	
+	Optional arguments:
+		personID = displays detailed hours of that # (use 'everyone' to show detailed hours for everyone who has worked on project)
+		startDate = standard WebDNA format (MM/DD/YYYY) to find hours within the specified day
+		endDate = standard WebDNA format (MM/DD/YYYY) to find hours within the specified day
+	[text multi=T]fProjectID=&fPersonID=&fStartDate=&fEndDate=[/text]
+	
+	[if "[url]&[params_string][/url]" ^ "[url]&projectID=[/url]"]
+		[then]
+			[text]fTemp=[url][getchars start=1&end=99&trim=both][:local:projectID][/getchars][/url][/text]
+			
+			[if [bfoValidInteger value=[fTemp]&required=T&min=0]][then]
+				[text]fLookupResults=[lookup db=db/project.db&value=[fTemp]&lookInField=proID&returnField=proID&notFound=f][/text]
+			
+				[showif f![fLookupResults]][text]fProjectID=[fLookupResults][/text][/showif]
+			[/then][/if]
+		[/then]
+		[else]
+			[showif [url][params_string][/url]!]
+				[text]fTemp=[url][getchars start=1&end=99&trim=both][params_string][/getchars][/url][/text]
+				
+				[if [bfoValidInteger value=[fTemp]&required=T&min=0]][then]
+					[text]fLookupResults=[lookup db=db/project.db&value=[fTemp]&lookInField=proID&returnField=proID&notFound=f][/text]
+					
+					[showif f![fLookupResults]][text]fProjectID=[fLookupResults][/text][/showif]
+				[/then][/if]
+			[/showif]
+		[/else]
+	[/if]
+	
+	[showif [fProjectID]!]
+		
+		[if "[url]&[params_string][/url]" ^ "[url]&personID=[/url]"][then]
+			[text]fTemp=[url][getchars start=1&end=99&trim=both][:local:personID][/getchars][/url][/text]
+			
+			[if "[fTemp]" = "everyone"]
+				[then][text]fPersonID=everyone[/text][/then]
+				[else]
+					[if [bfoValidInteger value=[fTemp]&required=T&min=0]][then]
+						[text]fLookupResults=[lookup db=[tDB]member.db&value=[fTemp]&lookInField=memID&returnField=memID][/text]
+				
+						[showif f![fLookupResults]][text]fPersonID=[fLookupResults][/text][/showif]
+					[/then][/if]
+				[/else]
+			[/if]
+		[/then][/if]
+		
+		[if "[url]&[params_string][/url]" ^ "[url]&startDate=[/url]"][then]
+			[text]fTemp=[url][getchars start=1&end=99&trim=both][:local:startDate][/getchars][/url][/text]
+			
+			[if [bfoValidDate value=[fTemp]&required=T&max=[math]{[date]}+1[/math]&DateFormat=[url]%m/%d/%Y[/url]]][then]
+				[text]fStartDate=[url][bfoValue][/url][/text]
+				[text]fEndDate=[fStartDate][/text]
+			[/then][/if]
+		[/then][/if]
+		
+		[if "[url]&[params_string][/url]" ^ "[url]&endDate=[/url]"][then]
+			[text]fTemp=[url][getchars start=1&end=99&trim=both][:local:endDate][/getchars][/url][/text]
+			
+			[if [bfoValidDate value=[fTemp]&required=T&max=[math]{[date]}+1[/math]&DateFormat=[url]%m/%d/%Y[/url]]][then]
+				[text]fEndDate=[url][bfoValue][/url][/text]
+				[showif [fStartDate]=][text]fStartDate=[fEndDate][/text][/showif]
+			[/then][/if]
+		[/then][/if]
+		
+		[text]fSearchString=db=db/timeclock.db&eqtimProjectIDdatarq=[fProjectID]&timProjectIDtype=num&rank=off&netimDeletedEntrydatarq=[true][/text]
+		
+		[if ("[fPersonID]" ! "everyone") & ("[fPersonID]" ! "")][then]
+			[text]fSearchString=[fSearchString]&eqtimPersonIDdatarq=[fPersonID]&timPersonIDtype=num[/text]
+		[/then][/if]
+		
+		[showif [fStartDate]!]
+			[text]fDateRangeStart=[timeclockEpoch date=[fStartDate]&time=[url]00:00:00[/url]][/text]
+			[text]fDateRangeEnd=[timeclockEpoch date=[fEndDate]&time=[url]23:59:59[/url]][/text]
+			
+			[text]fSearchString=[fSearchString]&letimStartPointdatarq=[fDateRangeEnd]&timStartPointtype=num[/text]
+			[text]fSearchString=[fSearchString]&getimEndPointdatarq=[fDateRangeStart]&timEndPointtype=num[/text]
+		[/showif]
+		
+		[table name=functionProjectHours&fields=fphPersonName,fphStartPoint,fphEndPoint][/table]
+		[search [fSearchString]]
+			[showif [NumFound]>0]
+				[text]fKnownPersonID=0[/text]
+				[text]fKnownPersonName=[/text]
+				[founditems]
+					[showif [timPersonID]![fKnownPersonID]]
+						[text]fKnownPersonID=[timPersonID][/text]
+						[text]fKnownPersonName=[lookup db=[tDB]member.db&value=[timPersonID]&lookInField=memID&returnField=memFirstName&notFound=] [/text]
+						[text]fKnownPersonName=[fKnownPersonName][lookup db=[tDB]member.db&value=[timPersonID]&lookInField=memID&returnField=memLastName&notFound=][/text]
+					[/showif]
+					[if "[fStartDate]" ! ""][then]
+						[text]fEntryEndValue=[if [timEndPoint]>[fDateRangeEnd]][then][fDateRangeEnd][/then][else][timEndPoint][/else][/if][/text]
+						[text]fEntryStartValue=[if [fDateRangeStart]>[timStartPoint]][then][fDateRangeStart][/then][else][timStartPoint][/else][/if][/text]
+					[/then][else]
+						[text]fEntryEndValue=[timEndPoint][/text]
+						[text]fEntryStartValue=[timStartPoint][/text]
+					[/else][/if]
+					[append table=functionProjectHours]fphStartPoint=[fEntryStartValue]&fphEndPoint=[fEntryEndValue]&fphPersonName=[fKnownPersonName][/append]
+				[/founditems]
+			[/showif]
+		[/search]
+		
+		// Project Name (only visible when printing)
+		[return]<h3 id="printName" class="hide">[lookup db=db/project.db&value=[fProjectID]&lookInField=proID&returnField=proName]</h3>[/return]
+		
+		[return]
+			[search table=functionProjectHours&nefphPersonNamedatarq=__bogus__&fphPersonNamesort=1&allhit=1&fphPersonNamesumm=T]
+				[showif [NumFound]>0]
+					[text]fSearchTotalHours=0[/text]
+					<table border="0" cellspacing="5" cellpadding="5">
+						<thead>
+							<tr>
+								<th>Person</th>
+								<th>Start Time</th>
+								<th>End Time</th>
+								<th>Hours</th>
+							</tr>
+						</thead>
+						<tbody>
+							[founditems]
+								<tr>
+									<td><strong>[fphPersonName]</strong></td>
+									<td></td>
+									<td></td>
+									<td></td>
+								</tr>
+								[search table=functionProjectHours&wsfphPersonNamedatarq=[fphPersonName]&allhit=1&fphStartPointsort=1&fphStartPointtype=num]
+									[showif [NumFound]>0]
+										[text]fSearchSubTotalHours=0[/text]
+										[founditems]
+											[text]fSearchSubTotalHours=[format .2f][math][fSearchSubTotalHours]+(([fphEndPoint]-[fphStartPoint])/(60*60))[/math][/format][/text]
+											[text]fSearchTotalHours=[format .2f][math][fSearchTotalHours]+(([fphEndPoint]-[fphStartPoint])/(60*60))[/math][/format][/text]
+											<tr>
+												<td></td>
+												<td>[timeclockEpochDate epoch=[fphStartPoint]&dateFormat=[url]%m/%d/%Y[/url]] [timeclockEpochTime epoch=[fphStartPoint]&timeFormat=[url]%I:%M %p[/url]]</td>
+												<td>[timeclockEpochDate epoch=[fphEndPoint]&dateFormat=[url]%m/%d/%Y[/url]] [timeclockEpochTime epoch=[fphEndPoint]&timeFormat=[url]%I:%M %p[/url]]</td>
+												<td>[format .2f][math]([fphEndPoint]-[fphStartPoint])/(60*60)[/math][/format]</td>
+											</tr>
+										[/founditems]
+										<tr>
+											<td><strong>Subtotal Hours</strong></td>
+											<td></td>
+											<td></td>
+											<td><strong>[fSearchSubTotalHours]</strong></td>
+										</tr>
+									[/showif]
+								[/search]
+							[/founditems]
+							<tr>
+								<td><strong>Total Hours</strong></td>
+								<td></td>
+								<td></td>
+								<td><strong>[fSearchTotalHours]</strong></td>
+							</tr>
+						</tbody>
+					</table>
+				[/showif]
+			[/search]
+		[/return]
+	[/showif]
+	
+	[return][/return]
+[/function]
+
+[function name=editProjectName]
+	Returns "OK" or an error string depending on success of editing a project's name
+	
+	Required arguments:
+		projectID - # of project to edit
+		projectName - string of new name for project
+	[text multi=T]fProjectID=&fProjectName=[/text]
+	
+	[if "[url]&[params_string][/url]" ^ "[url]&projectID=[/url]"][then]
+		[text]fTemp=[url][getchars start=1&end=99&trim=both][:local:projectID][/getchars][/url][/text]
+		
+		[if [bfoValidInteger value=[fTemp]&required=T&min=0]][then]
+			[text]fLookupResults=[lookup db=db/project.db&value=[fTemp]&lookInField=proID&returnField=proID&notFound=f][/text]
+			
+			[showif [fLookupResults]!f][text]fProjectID=[fLookupResults][/text][/showif]
+		[/then][/if]
+	[/then][/if]
+	
+	[if "[url]&[params_string][/url]" ^ "[url]&projectName=[/url]"][then]
+		[text]fProjectName=[url][getchars start=1&end=99&trim=both][:local:projectName][/getchars][/url][/text]
+	[/then][/if]
+	
+	[if ("[fProjectID]" ! "") & ("[fProjectName]" ! "")][then]
+		[replace db=db/project.db&eqproIDdatarq=[fProjectID]]proModPoint=[now]&proModUser=[tMemID]&proName=[fProjectName][/replace]
+		[return]OK[/return]
+	[/then][else]
+		[showif [fProjectID]=][return]Invalid projectID.<br>[/return][/showif]
+		[showif [fProjectName]=][return]Project Name cannot be blank.<br>[/return][/showif]
+	[/else][/if]
+	
+	[return][/return]
+[/function]
+
+[function name=changeProjectProperty]
+	Returns 'OK' or an error string depending on the success of updating a project's various properties
+	
+	Required arguments:
+		projectID - # of project to edit
+		projectProperty - string of property to update
+		propertyValue - string of new value for property
+	[text multi=T]fProjectID=&fProjectProperty=&fPropertyValue=[/text]
+	
+	[if "[url]&[params_string][/url]" ^ "[url]&projectID=[/url]"][then]
+		[text]fTemp=[url][getchars start=1&end=99&trim=both][:local:projectID][/getchars][/url][/text]
+		
+		[if [bfoValidInteger value=[fTemp]&required=T&min=0]][then]
+			[text]fLookupValue=[lookup db=db/project.db&value=[fTemp]&lookInField=proID&returnField=proID&notFound=f][/text]
+			
+			[showif f![fLookupValue]][text]fProjectID=[fLookupValue][/text][/showif]
+		[/then][/if]
+	[/then][/if]
+	
+	[if "[url]&[params_string][/url]" ^ "[url]&projectProperty=[/url]"][then]
+		[text]fProjectProperty=[url][getchars start=1&end=99&trim=both][:local:projectProperty][/getchars][/url][/text]
+	[/then][/if]
+	
+	[if "[url]&[params_string][/url]" ^ "[url]&propertyValue=[/url]"][then]
+		[text]fTemp=[url][getchars start=1&end=3&trim=both][:local:propertyValue][/getchars][/url][/text]
+		
+		[if ("[fTemp]" = "[url][true][/url]") | ("[fTemp]" = "[url][false][/url]")][then]
+			[text]fPropertyValue=[fTemp][/text]
+		[/then][/if]
+	[/then][/if]
+	
+	[if ("[fProjectID]" ! "") & ("[fProjectProperty]" ! "") & ("[fPropertyValue]" ! "")][then]
+		[if ("[fProjectProperty]" = "adminOnly") | ("[fProjectProperty]" = "status")][then]
+			[text]fProjectProperty=pro[fProjectProperty][/text]
+			
+			[replace db=db/project.db&eqproIDdatarq=[fProjectID]]proModPoint=[now]&proModUser=[tMemID]&[fProjectProperty]=[fPropertyValue][/replace]
+			
+			[return]OK[/return]
+		[/then][else]
+			[return]Invalid projectProperty.<br>[/return]
+		[/else][/if]
+	[/then][else]
+		[showif [fProjectID]=][return]Invalid projectID.<br>[/return][/showif]
+		[showif [fProjectProperty]=][return]Invalid projectProperty.<br>[/return][/showif]
+		[showif [fPropertyValue]=][return]Invalid propertyValue.<br>[/return][/showif]
+	[/else][/if]
+	
+	[return][/return]
+[/function]
+
+[function name=addProject]
+	Returns 'OK' or an error string depending on the success of adding a new project
+	
+	Required arguments:
+		projectName - string containing name of project
+		projectVisibility - string determining who can see project
+	[text multi=T]fProjectName=&fProjectVisibility=[/text]
+	
+	[if "[url]&[params_string][/url]" ^ "[url]&projectName=[/url]"][then]
+		[text]fProjectName=[url][getchars start=1&end=99&trim=both][:local:projectName][/getchars][/url][/text]
+	[/then][/if]
+	
+	[if "[url]&[params_string][/url]" ^ "[url]&projectVisibility=[/url]"][then]
+		[text]fTemp=[url][getchars start=1&end=99&trim=both][:local:projectVisibility][/getchars][/url][/text]
+		
+		[switch value=[fTemp]]
+			[case value=Everyone][text]fProjectVisibility=[false][/text][/case]
+			[case value=Admin Only][text]fProjectVisibility=[true][/text][/case]
+		[/switch]
+	[/then][/if]
+	
+	[if ("[fProjectName]" ! "") & ("[fProjectVisibility]" ! "")][then]
+		[text]fLookupResults=[lookup db=db/project.db&value=[fProjectName]&lookInField=proName&returnField=proName&notFound=f][/text]
+		
+		[if "[fLookupResults]" = "f"][then]
+			[append db=db/project.db&autonumber=proID]proCreatePoint=[now]&proCreateUser=[tMemID]&proModPoint=[now]&proModUser=[tMemID]&proName=[fProjectName]&proAdminOnly=[fProjectVisibility]&proStatus=[true][/append]
+			
+			[return]OK[/return]
+		[/then][else]
+			[return]Project already exists.<br>[/return]
+		[/else][/if]
+	[/then][else]
+		[showif [fProjectName]!][return]Invalid Project Name.<br>[/return][/showif]
+		[showif [fProjectVisibility]!][return]Invalid Project Visibility.<br>[/return][/showif]
+	[/else][/if]
+	
+	[return][/return]
+[/function]
+
+[/text][text]null=[/text]

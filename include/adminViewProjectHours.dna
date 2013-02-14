@@ -1,0 +1,17 @@
+<h2>View Project Hours</h2>
+<div id="message" class="alert hide"></div>
+<form class="well form-inline" id="projectHoursOptions" method="post" action="[thisurl]">
+	<input type="hidden" name="apiCommand" value="displayProjectHours" id="apiCommand">
+	<input type="hidden" name="pTodaysMidnight" value="[getTodaysMidnight]" id="pTodaysMidnight">
+	<label for="pProjectID"><i class="icon-cog" alt="Administration Options" title="Administration Options"></i> Project</label>
+	[getActiveProjects includeAdminOnly=T]
+	<label for="pPersonID">Person</label>
+	[getTimeclockMembers showAllOption=T]
+
+	<label for="pStartDate">[hideif [tClockAdmin]]<i class="icon-cog"></i> [/hideif]Starting Date</label> <input type="text" name="pStartDate" class="input-small" value="[input][format days_to_date %m/%d/%Y][math]{[date]}-6[/math][/format][/input]" id="pStartDate">
+	<label for="pEndDate">Ending Date</label> <input type="text" name="pEndDate" class="input-small" value="[input][date %m/%d/%Y][/input]" id="pEndDate">
+
+	<button type="submit" id="viewProjectHours" class="btn"><i class="icon-eye-open"></i> View</button>
+	<button id="printProjectHours" class="btn"><i class="icon-print"></i> Print</button>
+</form>
+<div id="projectHoursContent" class="hide"></div>

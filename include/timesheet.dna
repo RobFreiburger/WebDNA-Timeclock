@@ -1,0 +1,12 @@
+<h2>Timesheet</h2>
+<div id="message" class="alert hide"></div>
+<form class="well form-inline" id="timesheetRange" method="post" action="[thisurl]">
+	<input type="hidden" name="apiCommand" value="generateTimesheet" id="apiCommand">
+	<label for="pPersonID"><i class="icon-cog" alt="Administration Options" title="Administration Options"></i> View Timesheet as</label>
+	[getTimeclockMembers selectedValue=[tMemID]]
+	<label for="starting_date">[hideif [tClockAdmin]]<i class="icon-cog"></i> [/hideif]Starting Date</label> <input type="text" name="starting_date" class="input-small" value="[input][format days_to_date %m/%d/%Y][math]{[date]}-6[/math][/format][/input]" id="starting_date">
+	<label for="ending_date">Ending Date</label> <input type="text" name="ending_date" class="input-small" value="[input][date %m/%d/%Y][/input]" id="ending_date">
+	<button type="submit" id="rangeSubmit" class="btn"><i class="icon-eye-open"></i> View</button>
+	<button id="rangePrint" class="btn"><i class="icon-print"></i> Print</button>
+</form>
+<div id="timesheetContent" class="hide"></div>

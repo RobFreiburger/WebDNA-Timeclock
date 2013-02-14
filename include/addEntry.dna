@@ -1,0 +1,41 @@
+<h2>Add Entry</h2>
+<div id="message" class="alert hide"></div>
+<form id="addEntry" action="[thisurl]" method="post" class="form-horizontal">
+	<input type="hidden" name="apiCommand" value="addEntry" id="apiCommand">
+	<fieldset>
+		<div class="well control-group form-inline"> 
+			<label for="pPersonID"><i class="icon-cog" alt="Administration Options" title="Administration Options"></i> Add Entry as</label>
+			[getTimeclockMembers selectedValue=[tMemID]]
+		</div>
+	</fieldset>
+	<fieldset>
+		<div class="control-group">
+			<label class="control-label" for="pProjectID">Project</label>
+			<div class="controls">
+				[getActiveProjects]
+			</div>
+		</div>
+	</fieldset>
+	<fieldset>
+		<div class="control-group">
+			<label class="control-label" for="pStartDate">Start Time</label>
+			<div class="controls">
+				[getDate inputName=pStartDate] [getTimes selectName=pStartTime&selectedValue=[url]09:00:00[/url]]
+			</div>
+		</div>
+	</fieldset>
+	<fieldset>
+		<div class="control-group">
+			<label class="control-label" for="pEndDate">End Time</label>
+			<div class="controls">
+				[getDate inputName=pEndDate] [getTimes selectName=pEndTime&selectedValue=[url]12:00:00[/url]]
+			</div>
+		</div>
+	</fieldset>
+	<fieldset>
+		<div class="form-actions">
+			<a id="formSubmit" type="submit" class="btn btn-primary" href="javascript:;"><i class="icon-plus icon-white"></i> Add Entry to Timeclock</a>
+			<a id="formReset" type="reset" class="btn" href="timeclock.tpl#pageContent"><i class="icon-refresh"></i> Reset Form</a>
+		</div>
+	</fieldset>
+</form>

@@ -1,0 +1,25 @@
+<h2>View/Edit Entries</h2>
+<p id="helpText"><span class="label label-info">Info</span> Click on an entry to edit it.</p>
+<div id="message" class="alert hide"></div>
+<div class="well form-inline"> 
+	<label for="pPersonID"><i class="icon-cog" alt="Administration Options" title="Administration Options"></i> View/Edit as</label>
+	[getTimeclockMembers selectedValue=[tMemID]]
+</div>
+<form action="timeclock.notapi.dna" method="post" class="form-inline" id="editTimeclockEntry">
+	<input type="hidden" name="apiCommand" value="replaceEntry" id="apiCommand">
+	<input type="hidden" name="pTodaysMidnight" value="[input][getTodaysMidnight][/input]" id="pTodaysMidnight">
+	<div id="timeclockEntries">[displayTimeclockEntries personID=[tMemID]]</div>
+</form>
+<div id="modal" class="modal hide">
+	<div class="modal-header">
+		<a class="close" data-dismiss="modal">x</a>
+		<h3>Are you sure you want to permanently delete this entry?</h3>
+	</div>
+	<div class="modal-body">
+		<p>You can't undo this action.</p>
+	</div>
+	<div class="modal-footer">
+		<a href="javascript:;" class="btn" data-dismiss="modal">Cancel</a>
+		<a href="javascript:;" class="btn btn-danger">Delete Entry</a>
+	</div>
+</div>

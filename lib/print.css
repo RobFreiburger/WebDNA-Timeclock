@@ -1,0 +1,10 @@
+body{margin:0;padding:0;font-family:"Helvetica Neue",Helvetica,Arial,sans-serif;font-size:13px;line-height:18px;color:#333333;background-color:#ffffff;}
+.navbar{display:none;}
+h2{display:none;}
+#message{display:none;}
+.well{display:none;}
+hr{display:none;}
+#footer{display:none;}
+.hide{display:none;}
+#printName{display:block;}
+#pageContent{width:99.99999998999999%;}

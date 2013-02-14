@@ -1,0 +1,70 @@
+<h2>Edit Projects</h2>
+<div id="message" class="alert hide"></div>
+<div class="tabbable">
+	<ul class="nav nav-tabs">
+		<li class="active"><a href="#editProjects" data-toggle="tab"><i class="icon-tasks"></i> Edit Projects</a></li>
+		<li><a href="#addProject" data-toggle="tab"><i class="icon-plus-sign"></i> Add Project</a></li>
+	</ul>
+	<div class="tab-content">
+		<div class="tab-pane active" id="editProjects">
+			[search db=db/project.db&neProIDDataRQ=[blank]&allhit=1&proNameSort=1]
+				[showif [numFound]>0]
+					<p id="helpText"><span class="label label-info">Info</span> Click on an project name to edit it. Click on a button to toggle it.</p>
+					<table class="table table-striped">
+						<thead>
+							<tr>
+								<th>Project</th>
+								<th>Visibility</th>
+								<th>Status</th>
+							</tr>
+						</thead>
+						<tbody>
+							[founditems]
+								<tr id="[proID]">
+									<td id="editProjectName">[proName]</td>
+									<td>
+										[if [proAdminOnly]][then]
+											<button class="btn btn-inverse" id="adminOnly">Admins Only</button>
+										[/then][else]
+											<button class="btn" id="adminOnly">Everyone</button>
+										[/else][/if]
+									</td>
+									<td>
+										[if [proStatus]][then]
+											<button class="btn" id="status">Active</button>
+										[/then][else]
+											<button class="btn btn-inverse" id="status">Inactive</button>
+										[/else][/if]
+									</td>
+								</tr>
+							[/founditems]
+						</tbody>
+					</table>
+				[/showif]
+			[/search]
+		</div>
+		<div class="tab-pane" id="addProject">
+			<div class="form-horizontal">
+				<div class="control-group">
+					<label class="control-label" for="pProjectName">Project Name</label>
+					<div class="controls">
+						<input type="text" name="pProjectName" value="" id="pProjectName">
+					</div>
+				</div>
+				<div class="control-group">
+					<label class="control-label" for="pAdminOnly">Visibility</label>
+					<div class="controls">
+						<span class="btn-group" data-toggle="buttons-radio">
+							<button class="btn active">Everyone</button>
+							<button class="btn">Admin Only</button>
+						</span>
+					</div>
+				</div>
+				<div class="form-actions">
+					<a id="formSubmit" type="submit" class="btn btn-primary" href="javascript:;"><i class="icon-plus icon-white"></i> Add Project</a>
+					<a id="formReset" type="reset" class="btn" href="#"><i class="icon-refresh"></i> Reset Form</a>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
